@@ -1,2 +1,2 @@
 # ProjetoFABIN
-Sistema Monitoramento de Gases
+Sistema Monitoramento de Dados de Biodigestores.
