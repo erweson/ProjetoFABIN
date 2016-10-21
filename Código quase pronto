@@ -1,0 +1,185 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <Ultrasonic.h>
+#include <SD.h>
+#include <String.h>
+#include <virtuabotixRTC.h>           
+
+#define pino_trigger 4
+#define pino_echo                                                                                                                                                                                               5
+#define ONE_WIRE_BUS 3
+
+OneWire oneWire(ONE_WIRE_BUS); 
+Ultrasonic ultrasonic(pino_trigger, pino_echo);
+DallasTemperature temperature(&oneWire);
+DeviceAddress address;
+virtuabotixRTC myRTC(6, 7, 8);// 6 clk  7 Dat 8 RST
+Sd2Card cartaoSD;
+const int pinoCS = 2; 
+//Serve para printar as informações no SD pela primeira vez.
+int count = 0;
+
+ 
+void setup(void)
+{
+  Serial.begin(9600);
+  temperature.begin();
+  iniciaComunicacaoSD();
+  if (!temperature.getAddress(address, 0)) 
+  mostra_endereco_sensor(address); 
+  SD.begin(pinoCS);
+  Serial.print("Temperatura;Distancia;DiaDaSemana;Data;Hora;\n");   
+  //myRTC.setDS1302Time(00, 59, 16, 5, 20, 10, 2016);  
+}
+ 
+void loop(){
+   float temperatura = mostrarTemperatura();
+   float distancia = mostrarDistancia();
+   String data = mostrarData();  
+   String hora = mostrarHora();
+   String diaDaSemana = mostrarDiaDaSemana(myRTC.dayofweek);    
+   Serial.print(temperatura);
+   Serial.print(";");
+   Serial.print(distancia);
+   Serial.print(";");
+   Serial.print(diaDaSemana);
+   Serial.print(";");
+   Serial.print(data);
+   Serial.print(";");
+   Serial.print(hora);
+   Serial.print(";\n");
+   gravarSDf(temperatura);
+   gravarSDf(distancia);
+   gravarSDs(diaDaSemana);
+   gravarSDs(data);
+   gravarSDs(hora);
+   gravarSDf(-100);
+   delay(6000);
+}
+
+float mostrarTemperatura(){
+  temperature.requestTemperatures();
+  float tempC = temperature.getTempC(address);
+  return tempC;
+}
+
+float mostrarDistancia(){
+  float cmMsec;
+  long microsec = ultrasonic.timing();
+  cmMsec = ultrasonic.convert(microsec, Ultrasonic::CM);
+  return cmMsec;
+}
+void iniciaComunicacaoSD(){
+  if (!SD.begin(pinoCS)) 
+  {
+    Serial.println("Falha ao acessar o cartao !");
+    Serial.println("Verifique o cartao/conexoes e reinicie o Arduino...");
+    return;
+  }
+  Serial.println("Cartao iniciado corretamente !");
+}
+void gravarSDf(float sensor){
+  File dataFile = SD.open("arquivo.txt", FILE_WRITE);
+  if(count == 0){
+    dataFile.println("Temperatura;Distancia;DiaDaSemana;Data;Hora;");
+    count++;
+  }  
+    // Grava os dados no arquivo
+    if (dataFile) 
+    {
+      if(sensor == -100){
+        dataFile.println();
+      }else{
+        dataFile.print(sensor);
+        dataFile.print(";");
+      }
+      dataFile.close();
+    }  
+    else 
+    {
+      Serial.println("Erro ao abrir arquivo.txt !");
+    } 
+}
+
+void gravarSDs(String sensor){
+  File dataFile = SD.open("arquivo.txt", FILE_WRITE);
+    if (dataFile) 
+    {
+      dataFile.print(sensor);
+      dataFile.print(";");
+      dataFile.close();
+    }  
+    else 
+    {
+      Serial.println("Erro ao abrir arquivo.txt !");
+    } 
+}
+
+String mostrarData(){
+  myRTC.updateTime();  
+  int diaDoMes = myRTC.dayofmonth;  
+  int mes = myRTC.month;
+  int ano = myRTC.year;
+  String data = "";
+  data.concat(diaDoMes);
+  data.concat("/");
+  data.concat(mes);
+  data.concat("/");
+  data.concat(ano);
+  return data;
+}
+String mostrarHora(){
+  String hora = "";
+  if (myRTC.hours < 10){
+    hora.concat(0);
+  }
+  hora.concat(myRTC.hours);
+  hora.concat(":");
+  if (myRTC.minutes < 10){
+    hora.concat(0);
+  }
+  hora.concat(myRTC.minutes);
+  hora.concat(":");
+  if (myRTC.seconds < 10){
+    hora.concat("0");
+  }
+  hora.concat(myRTC.seconds);
+  return hora;
+}
+
+String mostrarDiaDaSemana(int dia){
+  switch (dia)
+  {
+    case 1:
+    return ("Domingo");
+    break;
+    case 2:
+    return ("Segunda");
+    break;
+    case 3:
+    return ("Terca");
+    break;
+    case 4:
+    return ("Quarta");
+    break;
+    case 5:
+    return ("Quinta");
+    break;
+    case 6:
+    return ("Sexta");
+    break;
+    case 7:
+    return ("Sabado");
+    break;
+  }
+}
+
+void mostra_endereco_sensor(DeviceAddress deviceAddress)
+{
+  for (uint8_t i = 0; i < 8; i++)
+  {
+    // Adiciona zeros se necessário
+    if (deviceAddress[i] < 16) Serial.print("0");
+    Serial.print(deviceAddress[i], HEX);
+  }
+}
