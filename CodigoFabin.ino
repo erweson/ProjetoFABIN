@@ -69,15 +69,15 @@ void setup(void)
   if (!temperature.getAddress(address, 0)) 
   mostra_endereco_sensor(address); 
   SD.begin(pinoCartaoSD);
-  //Define a parada do RTC    
+  ////Define a parada do RTC    
   rtc.halt(false);   
-  //Define o dia da semana
+  ////Define o dia da semana
   //rtc.setDOW(SEXTA); 
-  //Define o horario     
+  ////Define o horario     
   //rtc.setTime(13, 03, 00);
-  //Define o dia, mes e ano      
+  ////Define o dia, mes e ano      
   //rtc.setDate(11, 11, 2016);     
-  //Definicoes do pino SQW/Out
+  ////Definicoes do pino SQW/Out
   rtc.setSQWRate(SQW_RATE_1);
   rtc.enableSQW(true);
   //Define o pino do sensor de fluxo
